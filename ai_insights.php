@@ -1,32 +1,101 @@
 <?php
 require 'config.php';
 
-// Generate Smart AI Insights (Rule-Based)
+
 if (isset($_POST['generate_ai'])) {
     try {
-        // Bersihkan data insight lama (untuk demo/refresh)
-        $pdo->query("DELETE FROM ai_insights");
+        $stmt = $pdo->query("
+            SELECT p.id, p.nama_produk, p.stok_saat_ini, p.stok_minimum, p.harga_jual,
+                   COALESCE(SUM(dp.jumlah), 0) AS total_terjual_30hari
+            FROM produk p
+            LEFT JOIN detail_penjualan dp ON dp.produk_id = p.id
+            LEFT JOIN penjualan pj ON pj.id = dp.penjualan_id
+                AND pj.dibuat_pada >= NOW() - INTERVAL '30 days'
+            GROUP BY p.id
+            ORDER BY total_terjual_30hari DESC
+        ");
+        $produk_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Rule 1: Restock (Stok menipis <= batas minimum)
-        $stmt = $pdo->query("SELECT id, nama_produk, stok_saat_ini, stok_minimum FROM produk WHERE stok_saat_ini <= stok_minimum");
-        while ($row = $stmt->fetch()) {
-            $pesan = "Peringatan Stok! " . $row['nama_produk'] . " tersisa " . $row['stok_saat_ini'] . ". Segera restock untuk mengamankan potensi penjualan hari esok.";
-            $insert = $pdo->prepare("INSERT INTO ai_insights (produk_id, tipe_insight, pesan_rekomendasi, skor_presisi, status) VALUES (?, 'Restock', ?, 95.50, '0')");
-            $insert->execute([$row['id'], $pesan]);
+        if (empty($produk_list)) {
+            throw new Exception("Belum ada data produk untuk dianalisis.");
         }
 
-        // Rule 2: Promo (Stok menumpuk, lambat terjual - asumsikan stok > 3x batas minimum)
-        $stmt = $pdo->query("SELECT id, nama_produk, stok_saat_ini, stok_minimum FROM produk WHERE stok_saat_ini > (stok_minimum * 3) AND stok_minimum > 0");
-        while ($row = $stmt->fetch()) {
-            $pesan = "Analisis lambat: " . $row['nama_produk'] . " memiliki stok tinggi (" . $row['stok_saat_ini'] . "). Rekomendasi: Buat paket bundling atau diskon 15% akhir pekan ini.";
-            $insert = $pdo->prepare("INSERT INTO ai_insights (produk_id, tipe_insight, pesan_rekomendasi, skor_presisi, status) VALUES (?, 'Promo', ?, 82.00, '0')");
-            $insert->execute([$row['id'], $pesan]);
+        $data_text = "Data produk toko UMKM (30 hari terakhir):\n";
+        foreach ($produk_list as $p) {
+            $data_text .= "- ID: {$p['id']}, {$p['nama_produk']}: stok={$p['stok_saat_ini']}, min={$p['stok_minimum']}, terjual={$p['total_terjual_30hari']}x, harga=Rp{$p['harga_jual']}\n";
         }
 
-        header("Location: ai_insights.php?success=1");
-        exit;
-    } catch (PDOException $e) {
+        $prompt = $data_text . "\nBerikan 5 insight bisnis konkret dalam bahasa Indonesia. 
+        Balas HANYA dengan struktur JSON array ini:
+        [{\"produk_id\": id_angka, \"tipe\": \"Restock/Promo/Trending/Warning\", \"pesan\": \"...\", \"skor\": angka_0_100}]";
+
+        // PERINGATAN: Pindahkan API Key ini ke config.php atau file .env agar aman!
+        $api_key = "AIzaSyDyEGOMvZ9dS0qJjf0HZhw9X1haJz955ws"; 
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" . $api_key;
+
+        $payload = json_encode([
+            'contents' => [
+                ['parts' => [['text' => $prompt]]]
+            ],
+            'generationConfig' => [
+                'temperature' => 0.7,
+                'maxOutputTokens' => 1000,
+                'responseMimeType' => 'application/json' // Memaksa AI mengembalikan format JSON murni
+            ]
+        ]);
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        
+        // Disable SSL verify sementara jika di localhost XAMPP mengalami error SSL
+        // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
+        
+        $response = curl_exec($ch);
+        
+        if(curl_errno($ch)){
+            throw new Exception("cURL Error: " . curl_error($ch));
+        }
+        curl_close($ch);
+
+        $result = json_decode($response, true);
+        
+        if (isset($result['error'])) {
+            throw new Exception("API Error: " . $result['error']['message']);
+        }
+
+        $ai_text = $result['candidates'][0]['content']['parts'][0]['text'] ?? '[]';
+        $insights = json_decode($ai_text, true);
+
+        // Validasi apakah hasil parse JSON valid
+        if (json_last_error() === JSON_ERROR_NONE && is_array($insights)) {
+            $pdo->query("DELETE FROM ai_insights");
+            
+            $stmt = $pdo->prepare("INSERT INTO ai_insights (produk_id, tipe_insight, pesan_rekomendasi, skor_presisi, status) VALUES (?, ?, ?, ?, '0')");
+            
+            foreach ($insights as $ins) {
+                // Mencegah error jika AI lupa memberikan key tertentu
+                $p_id = $ins['produk_id'] ?? null;
+                $tipe = $ins['tipe'] ?? 'Info';
+                $pesan = $ins['pesan'] ?? '-';
+                $skor = $ins['skor'] ?? 0;
+
+                if ($p_id) {
+                    $stmt->execute([$p_id, $tipe, $pesan, $skor]);
+                }
+            }
+            header("Location: ai_insights.php?success=1");
+            exit;
+        } else {
+            throw new Exception("Format JSON dari AI tidak valid.");
+        }
+
+    } catch (Exception $e) {
         $error = "Gagal memproses AI: " . $e->getMessage();
+        // Hapus die() di production, gunakan ini untuk melihat pesan error di UI
+        die($error); 
     }
 }
 
