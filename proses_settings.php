@@ -1,0 +1,128 @@
+<?php
+
+/**
+ * proses_settings.php
+ * Proses semua POST dari settings.php
+ * Action: profil | password | tambah_kategori | hapus_kategori
+ */
+session_start();
+// if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit; }
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: settings.php');
+    exit;
+}
+
+require_once 'config/db.php';
+
+$action = trim($_POST['action'] ?? '');
+
+switch ($action) {
+
+    // ── Update Profil ─────────────────────────────────────────────
+    case 'profil':
+        $nama_lengkap = trim($_POST['nama_lengkap'] ?? '');
+        $username     = trim($_POST['username']     ?? '');
+        $email        = trim($_POST['email']        ?? '');
+
+        if (!$nama_lengkap || !$username || !$email) {
+            header('Location: settings.php?tab=profil&error=required');
+            exit;
+        }
+
+        // TODO: UPDATE tabel users SET nama_lengkap=?, username=?, email=? WHERE id=?
+        try {
+            // PERBAIKAN DI SINI: Hapus kolom diperbarui_pada
+            $pdo->prepare("UPDATE users SET nama_lengkap=?, username=?, email=? WHERE id=?")
+                ->execute([$nama_lengkap, $username, $email, $_SESSION['user_id']]);
+
+            // Update session
+            $_SESSION['nama_lengkap'] = $nama_lengkap;
+            $_SESSION['username']     = $username;
+            $_SESSION['email']        = $email;
+
+            header('Location: settings.php?tab=profil&success=profil');
+        } catch (PDOException $e) {
+            // Tangkap error jika gagal
+            die("Error DB: " . $e->getMessage());
+        }
+        break;
+
+    // ── Ubah Password ─────────────────────────────────────────────
+    case 'password':
+        $password_lama      = $_POST['password_lama']       ?? '';
+        $password_baru      = $_POST['password_baru']       ?? '';
+        $konfirmasi         = $_POST['konfirmasi_password']  ?? '';
+
+        if (!$password_lama || !$password_baru || !$konfirmasi) {
+            header('Location: settings.php?tab=password&error=required');
+            exit;
+        }
+        if ($password_baru !== $konfirmasi) {
+            header('Location: settings.php?tab=password&error=password_mismatch');
+            exit;
+        }
+
+        // TODO: Verifikasi password_lama dengan hash di DB
+        $stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $hash = $stmt->fetchColumn();
+        if (!password_verify($password_lama, $hash)) {
+            header('Location: settings.php?tab=password&error=wrong_password');
+            exit;
+        }
+        $new_hash = password_hash($password_baru, PASSWORD_BCRYPT);
+        $pdo->prepare("UPDATE users SET password=? WHERE id=?")->execute([$new_hash, $_SESSION['user_id']]);
+
+        header('Location: settings.php?tab=password&success=password');
+        break;
+
+    // ── Tambah Kategori ───────────────────────────────────────────
+    case 'tambah_kategori':
+        $nama_kategori = trim($_POST['nama_kategori'] ?? '');
+        $deskripsi     = trim($_POST['deskripsi']     ?? '') ?: null;
+
+        if (!$nama_kategori) {
+            header('Location: settings.php?tab=kategori&error=required');
+            exit;
+        }
+
+        try {
+            $pdo->prepare("INSERT INTO kategori (nama_kategori, deskripsi) VALUES (?, ?)")
+                ->execute([$nama_kategori, $deskripsi]);
+            header('Location: settings.php?tab=kategori&success=kat_added');
+        } catch (PDOException $e) {
+            error_log('[proses_settings/tambah_kategori] ' . $e->getMessage());
+            header('Location: settings.php?tab=kategori&error=db_error');
+        }
+        break;
+
+    // ── Hapus Kategori ────────────────────────────────────────────
+    case 'hapus_kategori':
+        $id = (int)($_POST['id'] ?? 0);
+        if (!$id) {
+            header('Location: settings.php?tab=kategori');
+            exit;
+        }
+
+        try {
+            // Cek apakah masih digunakan produk
+            $cek = $pdo->prepare("SELECT COUNT(*) FROM produk WHERE kategori_id = ?");
+            $cek->execute([$id]);
+            if ((int)$cek->fetchColumn() > 0) {
+                header('Location: settings.php?tab=kategori&error=kat_in_use');
+                exit;
+            }
+
+            $pdo->prepare("DELETE FROM kategori WHERE id = ?")->execute([$id]);
+            header('Location: settings.php?tab=kategori&success=kat_deleted');
+        } catch (PDOException $e) {
+            error_log('[proses_settings/hapus_kategori] ' . $e->getMessage());
+            header('Location: settings.php?tab=kategori&error=db_error');
+        }
+        break;
+
+    default:
+        header('Location: settings.php');
+}
+exit;
