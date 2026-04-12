@@ -43,6 +43,9 @@ $user_initials = strtoupper(substr($user_nama, 0, 1) . (strpos($user_nama, ' ') 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.2/dist/apexcharts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 <style>
 /* ==============================
    CSS VARIABLES & RESET
@@ -403,7 +406,7 @@ body {
   box-shadow: var(--shadow-sm);
   margin-bottom: 24px;
 }
-.chart-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+.chart-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
 .chart-title h3 { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
 .chart-title p  { font-size: 12px; color: var(--text-muted); }
 .chart-tabs { display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: var(--radius-sm); }
@@ -414,25 +417,8 @@ body {
 }
 .chart-tab.active { background: var(--primary); color: white; }
 .chart-tab:not(.active):hover { background: var(--border); }
-.chart-area {
-  display: flex; align-items: flex-end; gap: 10px;
-  height: 180px; padding-bottom: 28px; position: relative;
-}
-.chart-area::after {
-  content: ''; position: absolute; bottom: 28px; left: 0; right: 0;
-  height: 1px; background: var(--border);
-}
-.bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
-.bar { width: 100%; border-radius: 6px 6px 0 0; background: var(--primary-light); transition: var(--transition); cursor: pointer; position: relative; }
-.bar:hover { background: var(--primary); }
-.bar.highlight { background: var(--primary); }
-.bar-tooltip {
-  position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
-  background: var(--text-primary); color: white; font-size: 10px; font-weight: 700;
-  padding: 4px 7px; border-radius: 5px; white-space: nowrap; pointer-events: none;
-  font-family: var(--font-mono);
-}
-.bar-label { font-size: 10px; color: var(--text-muted); font-weight: 600; text-align: center; }
+.chart-area { width: 100%; height: 300px; }
+.bar-wrap, .bar, .bar-label, .bar-tooltip { display: none !important; }
 
 /* BOTTOM GRID */
 .dashboard-bottom { display: grid; grid-template-columns: 1fr 320px; gap: 18px; }
@@ -554,7 +540,42 @@ body {
   transition: var(--transition); display: flex; align-items: center; gap: 6px;
 }
 .btn-accent:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13,122,106,0.25); }
+/* Menghilangkan spin button bawaan browser */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
 
+.qty-control {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-qty {
+  width: 35px;
+  height: 35px;
+  border: 1px solid #ddd;
+  background: #f8f9fa;
+  cursor: pointer;
+  font-size: 18px;
+  border-radius: 4px;
+  transition: 0.2s;
+}
+
+.btn-qty:hover {
+  background: #e9ecef;
+}
+
+.input-qty {
+  width: 50px;
+  height: 35px;
+  text-align: center;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-weight: bold;
+}
 /* ==============================
    AI INSIGHTS
 ============================== */
@@ -705,6 +726,70 @@ tbody tr:last-child td { border-bottom: none; }
 @media (max-width: 480px) {
   .metric-grid { grid-template-columns: 1fr; }
 }
+
+/* ==============================
+   SWEETALERT2 CUSTOM THEME
+============================== */
+.swal2-popup {
+  font-family: var(--font-main) !important;
+  border-radius: var(--radius-lg) !important;
+  padding: 2rem 2rem 1.5rem !important;
+  box-shadow: 0 20px 60px rgba(13,122,106,0.18), 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+.swal2-title {
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  color: var(--text-primary) !important;
+  padding: 0 !important;
+  margin-bottom: 6px !important;
+}
+.swal2-html-container {
+  font-size: 13px !important;
+  color: var(--text-secondary) !important;
+  margin: 0 !important;
+}
+.swal2-icon {
+  border-width: 2px !important;
+  width: 52px !important;
+  height: 52px !important;
+  margin: 0 auto 16px !important;
+}
+.swal2-icon .swal2-icon-content { font-size: 26px !important; }
+.swal2-actions { gap: 8px !important; margin-top: 20px !important; }
+.swal2-confirm {
+  font-family: var(--font-main) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  padding: 9px 22px !important;
+  background: var(--primary) !important;
+  box-shadow: none !important;
+  transition: background 0.2s !important;
+}
+.swal2-confirm:hover { background: var(--primary-dark) !important; }
+.swal2-confirm.swal2-styled.btn-danger-confirm {
+  background: #e53e3e !important;
+}
+.swal2-confirm.swal2-styled.btn-danger-confirm:hover {
+  background: #c53030 !important;
+}
+.swal2-cancel {
+  font-family: var(--font-main) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  padding: 9px 22px !important;
+  background: var(--bg) !important;
+  color: var(--text-secondary) !important;
+  box-shadow: none !important;
+}
+.swal2-cancel:hover { background: var(--border) !important; }
+.swal2-timer-progress-bar { background: var(--primary) !important; }
+.swal2-icon.swal2-warning { border-color: var(--warning) !important; color: var(--warning) !important; }
+.swal2-icon.swal2-error { border-color: var(--danger) !important; }
+.swal2-icon.swal2-success { border-color: var(--success) !important; }
+.swal2-icon.swal2-success [class^=swal2-success-line] { background: var(--success) !important; }
+.swal2-icon.swal2-success .swal2-success-ring { border-color: rgba(56,161,105,0.25) !important; }
 </style>
 </head>
 <body>
@@ -764,7 +849,7 @@ tbody tr:last-child td { border-bottom: none; }
           <span><?= htmlspecialchars($user_role) ?></span>
         </div>
       </div>
-      <a href="logout.php" class="nav-item logout" onclick="return confirm('Yakin ingin logout?')">
+      <a href="#" class="nav-item logout" onclick="konfirmasiLogout(event)">
         <i class="fa-solid fa-right-from-bracket"></i>
         <span class="nav-label">Logout</span>
       </a>

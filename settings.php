@@ -304,11 +304,11 @@ $tab = $_GET['tab'] ?? 'profil';
                       </td>
                       <td>
                         <?php if ((int)$k['jumlah_produk'] === 0): ?>
-                          <form method="POST" action="proses_settings.php" style="display:inline;">
+                          <form method="POST" action="proses_settings.php" style="display:inline;" id="form-hapus-kat-<?= $k['id'] ?>">
                             <input type="hidden" name="action" value="hapus_kategori">
                             <input type="hidden" name="id" value="<?= $k['id'] ?>">
-                            <button type="submit" class="btn-del"
-                                    onclick="return confirm('Hapus kategori &quot;<?= htmlspecialchars(addslashes($k['nama_kategori'])) ?>&quot;?')"
+                            <button type="button" class="btn-del"
+                                    onclick="konfirmasiHapusKategori(<?= $k['id'] ?>, '<?= htmlspecialchars(addslashes($k['nama_kategori'])) ?>')"
                                     title="Hapus">
                               <i class="fa-solid fa-trash"></i>
                             </button>
@@ -392,6 +392,11 @@ $tab = $_GET['tab'] ?? 'profil';
 </style>
 
 <script>
+function konfirmasiHapusKategori(id, nama) {
+    UlalaAlert.hapus(nama, () => {
+        document.getElementById('form-hapus-kat-' + id).submit();
+    });
+}
 function togglePassSettings(id, btn) {
     const el = document.getElementById(id);
     const icon = btn.querySelector('i');

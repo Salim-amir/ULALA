@@ -1,4 +1,5 @@
 <?php
+
 /**
  * input_penjualan.php
  * ─────────────────────────────────────────────────────────────────
@@ -20,17 +21,17 @@ $active_menu = 'input_penjualan';
 $flash_type = '';
 $flash_msg  = '';
 if (isset($_GET['success']) && $_GET['success'] === 'saved') {
-    $flash_type = 'success';
-    $flash_msg  = 'Transaksi berhasil disimpan!';
+  $flash_type = 'success';
+  $flash_msg  = 'Transaksi berhasil disimpan!';
 }
 if (isset($_GET['error'])) {
-    $flash_type = 'danger';
-    $flash_msg  = match($_GET['error']) {
-        'empty_items'    => 'Harap pilih minimal satu produk.',
-        'invalid_total'  => 'Total transaksi tidak valid.',
-        'db_error'       => 'Terjadi kesalahan saat menyimpan. Coba lagi.',
-        default          => 'Melebihi Stok!.',
-    };
+  $flash_type = 'danger';
+  $flash_msg  = match ($_GET['error']) {
+    'empty_items'    => 'Harap pilih minimal satu produk.',
+    'invalid_total'  => 'Total transaksi tidak valid.',
+    'db_error'       => 'Terjadi kesalahan saat menyimpan. Coba lagi.',
+    default          => 'Melebihi Stok!.',
+  };
 }
 
 // ── Auto-generate nomor transaksi (placeholder) ────────────────────
@@ -112,31 +113,39 @@ include 'layout/header.php';
           <div class="detail-item" data-index="0">
             <div class="form-row grid-4" style="margin-bottom:10px;">
               <div class="form-field" style="grid-column:span 2;">
-                <label>Produk</label>
-                <select name="produk_id[]" id="produk_id_0" onchange="updateHarga(0)" required>
-                  <option value="">-- Pilih Produk --</option>
-                  <?php foreach ($daftar_produk as $p): ?>
-                    <option
-                      value="<?= $p['id'] ?>"
-                      data-harga="<?= $p['harga_jual'] ?>"
-                      <?= $p['stok_saat_ini'] <= 0 ? 'disabled' : '' ?>>
-                      <?= htmlspecialchars($p['nama_produk']) ?>
-                      — Rp <?= number_format($p['harga_jual'], 0, ',', '.') ?>
-                      <?= $p['stok_saat_ini'] <= 0 ? '(Stok habis)' : '' ?>
-                    </option>
-                  <?php endforeach; ?>
-                </select>
-              </div>
+  <label>Produk</label>
+  <select name="produk_id[]" id="produk_id_0" onchange="updateHarga(0)" required>
+    <option value="">-- Pilih Produk --</option>
+    <?php foreach ($daftar_produk as $p): ?>
+      <option
+        value="<?= $p['id'] ?>"
+        data-harga="<?= $p['harga_jual'] ?>"
+        data-stok="<?= $p['stok_saat_ini'] ?>" 
+        <?= $p['stok_saat_ini'] <= 0 ? 'disabled' : '' ?>>
+        <?= htmlspecialchars($p['nama_produk']) ?>
+        — Rp <?= number_format($p['harga_jual'], 0, ',', '.') ?>
+      </option>
+    <?php endforeach; ?>
+  </select>
+  <small id="stok_info_0" style="display:block; margin-top:4px; color:var(--text-muted); font-weight:600;">
+    Stok tersedia: -
+  </small>
+</div>
               <div class="form-field">
                 <label>Jumlah</label>
-                <input
-                  type="number"
-                  name="jumlah[]"
-                  id="jumlah_0"
-                  min="1"
-                  value="1"
-                  oninput="recalcTotal()"
-                  required>
+                <div class="qty-control">
+                  <button type="button" class="btn-qty" onclick="stepQty(this, -1)">−</button>
+                  <input
+                    type="number"
+                    name="jumlah[]"
+                    id="jumlah_0"
+                    class="input-qty"
+                    min="1"
+                    value="1"
+                    oninput="recalcTotal()"
+                    required>
+                  <button type="button" class="btn-qty" onclick="stepQty(this, 1)">+</button>
+                </div>
               </div>
               <div class="form-field">
                 <label>Harga Satuan (Rp)</label>
@@ -225,8 +234,8 @@ include 'layout/header.php';
             <span class="value" id="disp-total">Rp 0</span>
           </div>
           <!-- Hidden computed fields — nilai diisi oleh recalcTotal() di JS -->
-          <input type="hidden" id="subtotal"   name="subtotal"   value="0">
-          <input type="hidden" id="pajak"      name="pajak"      value="0">
+          <input type="hidden" id="subtotal" name="subtotal" value="0">
+          <input type="hidden" id="pajak" name="pajak" value="0">
           <input type="hidden" id="total_bayar" name="total_bayar" value="0">
         </div>
 
@@ -247,43 +256,30 @@ include 'layout/header.php';
 </div><!-- /page-content -->
 
 <script>
-/* ── Inject data produk ke JS agar addItem() bisa membangun <select> dinamis ── */
-const PRODUK_LIST = <?= json_encode(array_map(fn($p) => [
-    'id'    => $p['id'],
-    'nama'  => $p['nama_produk'],
-    'harga' => $p['harga_jual'],
-    'stok'  => $p['stok_saat_ini'],
-], $daftar_produk), JSON_UNESCAPED_UNICODE) ?>;
+  /* ── Inject data produk ke JS agar addItem() bisa membangun <select> dinamis ── */
+  const PRODUK_LIST = <?= json_encode(array_map(fn($p) => [
+                        'id'    => $p['id'],
+                        'nama'  => $p['nama_produk'],
+                        'harga' => $p['harga_jual'],
+                        'stok'  => $p['stok_saat_ini'],
+                      ], $daftar_produk), JSON_UNESCAPED_UNICODE) ?>;
 
-/* Override buildProdukOptions dari footer.php agar pakai data PHP yang fresh */
-function buildProdukOptions(selectedId) {
-    let html = '<option value="">-- Pilih Produk --</option>';
-    PRODUK_LIST.forEach(p => {
-        const sel      = p.id == selectedId ? 'selected' : '';
-        const disabled = p.stok <= 0 ? 'disabled' : '';
-        const hargaFmt = p.harga.toLocaleString('id-ID');
-        const habis    = p.stok <= 0 ? ' (Stok habis)' : '';
-        html += `<option value="${p.id}" data-harga="${p.harga}" ${sel} ${disabled}>${p.nama} — Rp ${hargaFmt}${habis}</option>`;
-    });
-    return html;
-}
-
-/* Validasi client-side sebelum submit */
-document.getElementById('form-penjualan').addEventListener('submit', function(e) {
+  /* Validasi client-side sebelum submit */
+  document.getElementById('form-penjualan').addEventListener('submit', function(e) {
     const total = parseFloat(document.getElementById('total_bayar').value) || 0;
     if (total <= 0) {
-        e.preventDefault();
-        showFlash('danger', 'Harap pilih produk dan isi jumlah terlebih dahulu!');
-        return;
+      e.preventDefault();
+      showFlash('danger', 'Harap pilih produk dan isi jumlah terlebih dahulu!');
+      return;
     }
     /* Disable tombol agar tidak double-submit */
     document.getElementById('btn-submit-penjualan').disabled = true;
     document.getElementById('btn-submit-penjualan').innerHTML =
-        '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
-});
+      '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+  });
 
-/* Hitung ulang saat halaman dimuat (jika ada nilai tersisa) */
-document.addEventListener('DOMContentLoaded', recalcTotal);
+  /* Hitung ulang saat halaman dimuat (jika ada nilai tersisa) */
+  document.addEventListener('DOMContentLoaded', recalcTotal);
 </script>
 
 <?php include 'layout/footer.php'; ?>

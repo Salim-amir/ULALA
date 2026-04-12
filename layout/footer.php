@@ -33,50 +33,138 @@ window.addEventListener('resize', () => {
    SALES CHART (dashboard.php)
    Dipanggil dari dashboard.php setelah DOM siap.
 ============================ */
-function renderChart(dataset) {
+/* ============================
+   APEX CHART INSTANCE
+============================ */
+let _apexChart = null;
+
+function _buildApexOptions(dataset, chartType) {
+  const labels  = dataset.map(d => d.label);
+  const values  = dataset.map(d => d.val);
+  const primary      = '#0d7a6a';
+  const primaryLight = '#e6f4f1';
+  const isArea = chartType === 'Harian';
+
+  const sharedAxis = {
+    xaxis: {
+      categories: labels,
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+      labels: { style: { colors: '#8aa8a3', fontSize: '11px', fontWeight: 600 } }
+    },
+    yaxis: {
+      min: 0,
+      labels: {
+        style: { colors: '#8aa8a3', fontSize: '11px' },
+        formatter: val => {
+          if (val >= 1000000) return 'Rp ' + (val / 1000000).toFixed(1) + 'M';
+          if (val >= 1000)    return 'Rp ' + (val / 1000).toFixed(0) + 'K';
+          return 'Rp ' + val;
+        }
+      }
+    },
+    grid: {
+      borderColor: '#e2ece9',
+      strokeDashArray: 4,
+      xaxis: { lines: { show: false } },
+      yaxis: { lines: { show: true } },
+      padding: { top: 4, right: 12, bottom: 0, left: 8 }
+    },
+    tooltip: {
+      theme: 'light',
+      style: { fontSize: '12px', fontFamily: "\'Plus Jakarta Sans\', sans-serif" },
+      y: { formatter: val => 'Rp ' + Math.round(val).toLocaleString('id-ID') },
+      marker: { show: true }
+    },
+    dataLabels: { enabled: false },
+  };
+
+  if (isArea) {
+    return {
+      series: [{ name: 'Pendapatan', data: values }],
+      chart: {
+        type: 'area', height: 300,
+        toolbar: { show: false }, zoom: { enabled: false },
+        animations: { enabled: true, easing: 'easeinout', speed: 700 },
+        fontFamily: "\'Plus Jakarta Sans\', sans-serif",
+      },
+      colors: [primary],
+      fill: {
+        type: 'gradient',
+        gradient: {
+          shade: 'light', type: 'vertical',
+          gradientToColors: [primaryLight],
+          opacityFrom: 0.55, opacityTo: 0.02, stops: [0, 100]
+        }
+      },
+      stroke: { curve: 'smooth', width: 2.5 },
+      markers: {
+        size: 4,
+        colors: ['#fff'],
+        strokeColors: primary,
+        strokeWidth: 2.5,
+        hover: { size: 6 }
+      },
+      ...sharedAxis,
+    };
+  } else {
+    const colWidth = labels.length <= 4 ? '42%' : labels.length <= 6 ? '52%' : '62%';
+    return {
+      series: [{ name: 'Pendapatan', data: values }],
+      chart: {
+        type: 'bar', height: 300,
+        toolbar: { show: false }, zoom: { enabled: false },
+        animations: { enabled: true, easing: 'easeinout', speed: 600, animateGradually: { enabled: true, delay: 80 } },
+        fontFamily: "\'Plus Jakarta Sans\', sans-serif",
+      },
+      colors: [primary],
+      fill: {
+        type: 'gradient',
+        gradient: {
+          shade: 'light', type: 'vertical',
+          gradientToColors: [primaryLight],
+          opacityFrom: 1, opacityTo: 0.6, stops: [0, 100]
+        }
+      },
+      stroke: { show: false },
+      plotOptions: {
+        bar: {
+          borderRadius: 7,
+          borderRadiusApplication: 'end',
+          columnWidth: colWidth,
+        }
+      },
+      states: {
+        hover: { filter: { type: 'darken', value: 0.85 } }
+      },
+      ...sharedAxis,
+    };
+  }
+}
+
+function renderChart(dataset, chartType) {
   const container = document.getElementById('sales-chart');
   if (!container) return;
+
+  const type = chartType || window._currentChartType || 'Mingguan';
+
+  if (_apexChart) { _apexChart.destroy(); _apexChart = null; }
   container.innerHTML = '';
 
-  const max = Math.max(...dataset.map(d => d.val));
-  const containerH = 152;
-
-  dataset.forEach((d, i) => {
-    const barH = Math.round((d.val / max) * containerH);
-    const isHighlight = d.val === max;
-
-    const wrap = document.createElement('div');
-    wrap.className = 'bar-wrap';
-
-    const bar = document.createElement('div');
-    bar.className = 'bar' + (isHighlight ? ' highlight' : '');
-    bar.style.height = '4px';
-    bar.style.transition = `height 0.7s cubic-bezier(0.4,0,0.2,1) ${i * 0.08}s`;
-
-    if (isHighlight) {
-      const tip = document.createElement('div');
-      tip.className = 'bar-tooltip';
-      tip.textContent = 'Rp ' + (d.val / 1000000).toFixed(1) + 'M';
-      bar.appendChild(tip);
-    }
-
-    const lbl = document.createElement('div');
-    lbl.className = 'bar-label';
-    lbl.textContent = d.label;
-
-    wrap.appendChild(bar);
-    wrap.appendChild(lbl);
-    container.appendChild(wrap);
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => { bar.style.height = barH + 'px'; });
-    });
-  });
+  _apexChart = new ApexCharts(container, _buildApexOptions(dataset, type));
+  _apexChart.render();
 }
 
 function switchChartTab(btn) {
   document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
+  const tabName = btn.textContent.trim();
+  window._currentChartType = tabName;
+
+  if (typeof CHART_DATA !== 'undefined' && CHART_DATA[tabName]) {
+    renderChart(CHART_DATA[tabName], tabName);
+    return;
+  }
 
   const data = {
     'Harian': [
@@ -93,13 +181,25 @@ function switchChartTab(btn) {
     ]
   };
 
-  renderChart(data[btn.textContent] || data['Mingguan']);
+  renderChart(data[tabName] || data['Mingguan'], tabName);
 }
 
 /* ============================
    INPUT PENJUALAN (input_penjualan.php)
 ============================ */
 let itemCount = 1;
+
+function stepQty(button, step) {
+  const input = button.parentNode.querySelector('input[type="number"]');
+  if (!input) return;
+  const newValue = (parseInt(input.value) || 0) + step;
+  const min = parseInt(input.min) || 1;
+  const max = input.max ? parseInt(input.max) : Infinity;
+  if (newValue >= min && newValue <= max) {
+    input.value = newValue;
+    if (typeof recalcTotal === 'function') recalcTotal();
+  }
+}
 
 function formatRp(n) {
   return 'Rp ' + Math.round(n).toLocaleString('id-ID');
@@ -110,8 +210,22 @@ function updateHarga(idx) {
   if (!sel) return;
   const opt = sel.options[sel.selectedIndex];
   const harga = opt.dataset.harga || 0;
+  const stok  = opt.dataset.stok;
+
   const hargaInput = document.getElementById('harga_satuan_' + idx);
   if (hargaInput) hargaInput.value = harga;
+
+  const stokLabel = document.getElementById('stok_info_' + idx);
+  const qtyInput  = document.getElementById('jumlah_' + idx);
+
+  if (opt.value !== '') {
+    if (stokLabel) stokLabel.innerHTML = `Stok tersedia: <span style="color:var(--primary)">${stok}</span>`;
+    if (qtyInput)  qtyInput.max = stok;
+  } else {
+    if (stokLabel) stokLabel.innerHTML = 'Stok tersedia: -';
+    if (qtyInput)  qtyInput.removeAttribute('max');
+  }
+
   recalcTotal();
 }
 
@@ -147,22 +261,15 @@ function recalcTotal() {
 }
 
 function buildProdukOptions(selectedId) {
-  /* 
-   * TODO: Ganti dengan <select> yang diisi dinamis dari PHP/AJAX.
-   * Saat ini menggunakan data statis sebagai placeholder.
-   */
-  const products = [
-    {id: 1, nama: 'Kopi Arabica Gayo 250g',   harga: 85000},
-    {id: 2, nama: 'Madu Hutan Murni 500ml',   harga: 120000},
-    {id: 3, nama: 'Gula Semut Aren 1kg',       harga: 45000},
-    {id: 4, nama: 'Teh Hijau Organik 100g',    harga: 35000},
-    {id: 5, nama: 'Temulawak Kering 500g',     harga: 75000},
-  ];
+  // Gunakan PRODUK_LIST yang di-inject oleh input_penjualan.php (data real dari DB)
+  // Fallback ke array kosong jika tidak tersedia (halaman lain)
+  const list = (typeof PRODUK_LIST !== 'undefined') ? PRODUK_LIST : [];
   let html = '<option value="">-- Pilih Produk --</option>';
-  products.forEach(p => {
-    const sel = p.id == selectedId ? 'selected' : '';
+  list.forEach(p => {
+    const sel      = p.id == selectedId ? 'selected' : '';
+    const disabled = p.stok <= 0 ? 'disabled' : '';
     const hargaFmt = p.harga.toLocaleString('id-ID');
-    html += `<option value="${p.id}" data-harga="${p.harga}" ${sel}>${p.nama} — Rp ${hargaFmt}</option>`;
+    html += `<option value="${p.id}" data-harga="${p.harga}" data-stok="${p.stok}" ${sel} ${disabled}>${p.nama} — Rp ${hargaFmt}</option>`;
   });
   return html;
 }
@@ -179,20 +286,27 @@ function addItem() {
     <div class="form-row grid-4" style="margin-bottom:10px;">
       <div class="form-field" style="grid-column:span 2;">
         <label>Produk</label>
-        <select name="produk_id[]" id="produk_id_${idx}" onchange="updateHarga(${idx})">
+        <select name="produk_id[]" id="produk_id_${idx}" onchange="updateHarga(${idx})" required>
           ${buildProdukOptions(null)}
         </select>
+        <small id="stok_info_${idx}" style="display:block; margin-top:4px; color:var(--text-muted); font-weight:600;">
+          Stok tersedia: -
+        </small>
       </div>
       <div class="form-field">
         <label>Jumlah</label>
-        <input type="number" name="jumlah[]" id="jumlah_${idx}" min="1" value="1" oninput="recalcTotal()">
+        <div class="qty-control">
+          <button type="button" class="btn-qty" onclick="stepQty(this, -1)">−</button>
+          <input type="number" name="jumlah[]" id="jumlah_${idx}" class="input-qty" min="1" value="1" oninput="recalcTotal()" required>
+          <button type="button" class="btn-qty" onclick="stepQty(this, 1)">+</button>
+        </div>
       </div>
       <div class="form-field">
-        <label>Harga Satuan</label>
-        <input type="number" name="harga_satuan[]" id="harga_satuan_${idx}" placeholder="0" oninput="recalcTotal()">
+        <label>Harga Satuan (Rp)</label>
+        <input type="number" name="harga_satuan[]" id="harga_satuan_${idx}" placeholder="0" min="0" oninput="recalcTotal()" required>
       </div>
     </div>
-    <button type="button" class="btn-sm" style="margin-bottom:10px;color:var(--danger);border-color:var(--danger);" onclick="removeItem(this)">
+    <button type="button" class="btn-del" onclick="this.parentElement.remove(); recalcTotal();" style="margin-bottom:15px; width:auto; padding:0 10px;">
       <i class="fa-solid fa-trash"></i> Hapus Baris
     </button>`;
 
@@ -205,7 +319,6 @@ function removeItem(btn) {
   btn.closest('.detail-item').remove();
   recalcTotal();
 }
-
 function resetPenjualan() {
   const form = document.getElementById('form-penjualan');
   if (form) form.reset();
@@ -217,17 +330,24 @@ function resetPenjualan() {
         <div class="form-row grid-4" style="margin-bottom:10px;">
           <div class="form-field" style="grid-column:span 2;">
             <label>Produk</label>
-            <select name="produk_id[]" id="produk_id_0" onchange="updateHarga(0)">
+            <select name="produk_id[]" id="produk_id_0" onchange="updateHarga(0)" required>
               ${buildProdukOptions(null)}
             </select>
+            <small id="stok_info_0" style="display:block; margin-top:4px; color:var(--text-muted); font-weight:600;">
+              Stok tersedia: -
+            </small>
           </div>
           <div class="form-field">
             <label>Jumlah</label>
-            <input type="number" name="jumlah[]" id="jumlah_0" min="1" value="1" oninput="recalcTotal()">
+            <div class="qty-control">
+              <button type="button" class="btn-qty" onclick="stepQty(this, -1)">−</button>
+              <input type="number" name="jumlah[]" id="jumlah_0" class="input-qty" min="1" value="1" oninput="recalcTotal()" required>
+              <button type="button" class="btn-qty" onclick="stepQty(this, 1)">+</button>
+            </div>
           </div>
           <div class="form-field">
-            <label>Harga Satuan</label>
-            <input type="number" name="harga_satuan[]" id="harga_satuan_0" placeholder="0" oninput="recalcTotal()">
+            <label>Harga Satuan (Rp)</label>
+            <input type="number" name="harga_satuan[]" id="harga_satuan_0" placeholder="0" min="0" oninput="recalcTotal()" required>
           </div>
         </div>
       </div>`;
@@ -301,7 +421,84 @@ function showFlash(type, message) {
 document.addEventListener('DOMContentLoaded', () => {
   const phpFlash = document.getElementById('php-flash');
   if (phpFlash) setTimeout(() => phpFlash.style.opacity = '0', 3500);
+
+  // Cegah Enter di dalam form penjualan agar tidak trigger submit
+  const formPenjualan = document.getElementById('form-penjualan');
+  if (formPenjualan) {
+    formPenjualan.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        const tag = e.target.tagName;
+        // Boleh Enter hanya di textarea, bukan di select/input lain
+        if (tag !== 'TEXTAREA') {
+          e.preventDefault();
+        }
+      }
+    });
+  }
 });
+
+/* ============================
+   GLOBAL SWEETALERT2 HELPERS
+============================ */
+const UlalaAlert = {
+  // Konfirmasi logout
+  logout() {
+    Swal.fire({
+      title: 'Keluar dari aplikasi?',
+      html: 'Sesi kamu akan diakhiri dan kamu perlu login kembali.',
+      icon: 'question',
+      iconColor: '#0d7a6a',
+      showCancelButton: true,
+      confirmButtonText: '<i class="fa-solid fa-right-from-bracket" style="margin-right:6px;font-size:11px;"></i>Ya, Logout',
+      cancelButtonText: 'Batal',
+      reverseButtons: true,
+      focusCancel: true,
+    }).then(r => { if (r.isConfirmed) window.location.href = 'logout.php'; });
+  },
+
+  // Konfirmasi hapus generik
+  hapus(nama, onConfirm) {
+    Swal.fire({
+      title: 'Hapus data ini?',
+      html: `<span style="color:var(--text-primary);font-weight:600;">"${nama}"</span><br><span style="font-size:12px;color:#e53e3e;">Tindakan ini tidak dapat dibatalkan.</span>`,
+      icon: 'warning',
+      iconColor: '#dd6b20',
+      showCancelButton: true,
+      confirmButtonText: '<i class="fa-solid fa-trash" style="margin-right:6px;font-size:11px;"></i>Ya, Hapus',
+      cancelButtonText: 'Batal',
+      reverseButtons: true,
+      customClass: { confirmButton: 'swal2-confirm btn-danger-confirm' },
+    }).then(r => { if (r.isConfirmed) onConfirm(); });
+  },
+
+  // Notifikasi sukses (auto-close)
+  sukses(pesan, judul = 'Berhasil!') {
+    Swal.fire({
+      title: judul,
+      text: pesan,
+      icon: 'success',
+      timer: 2500,
+      timerProgressBar: true,
+      showConfirmButton: false,
+    });
+  },
+
+  // Notifikasi error
+  error(pesan, judul = 'Terjadi Kesalahan') {
+    Swal.fire({ title: judul, text: pesan, icon: 'error', confirmButtonText: 'Tutup' });
+  },
+
+  // Notifikasi info
+  info(pesan, judul = 'Informasi') {
+    Swal.fire({ title: judul, text: pesan, icon: 'info', confirmButtonText: 'Mengerti' });
+  },
+};
+
+// Global shortcut untuk logout (dipanggil dari onclick di header)
+function konfirmasiLogout(e) {
+  e && e.preventDefault();
+  UlalaAlert.logout();
+}
 </script>
 </body>
 </html>

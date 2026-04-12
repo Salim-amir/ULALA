@@ -62,15 +62,6 @@ $ai_reco = $pdo->query("
     LIMIT 1
 ")->fetch();
 
-// ── Chart: Mingguan (4 minggu terakhir) ───────────────────────────
-$chart_minggu = [];
-for ($w = 3; $w >= 0; $w--) {
-    $ws = date('Y-m-d 00:00:00', strtotime("monday -$w weeks"));
-    $we = date('Y-m-d 23:59:59', strtotime("sunday -$w weeks"));
-    $s  = $pdo->prepare("SELECT COALESCE(SUM(total_bayar),0) FROM penjualan WHERE dibuat_pada BETWEEN ? AND ?");
-    $s->execute([$ws, $we]);
-    $chart_minggu[] = ['label' => 'Minggu ' . (4 - $w), 'val' => (float)$s->fetchColumn()];
-}
 
 // ── Chart: Harian (7 hari terakhir) ──────────────────────────────
 $chart_harian = [];
@@ -152,8 +143,7 @@ include 'layout/header.php';
         <p>Visualisasi pendapatan dari data transaksi nyata</p>
       </div>
       <div class="chart-tabs">
-        <button class="chart-tab" onclick="switchChartTab(this)">Harian</button>
-        <button class="chart-tab active" onclick="switchChartTab(this)">Mingguan</button>
+        <button class="chart-tab active" onclick="switchChartTab(this)">Harian</button>
         <button class="chart-tab" onclick="switchChartTab(this)">Bulanan</button>
       </div>
     </div>
@@ -243,19 +233,90 @@ include 'layout/header.php';
 </div><!-- /page-content -->
 
 <script>
+// 1. Data dari PHP
 const CHART_DATA = {
     Harian:   <?= json_encode($chart_harian,  JSON_NUMERIC_CHECK) ?>,
-    Mingguan: <?= json_encode($chart_minggu,  JSON_NUMERIC_CHECK) ?>,
     Bulanan:  <?= json_encode($chart_bulanan, JSON_NUMERIC_CHECK) ?>,
 };
 
-document.addEventListener('DOMContentLoaded', () => renderChart(CHART_DATA.Mingguan));
+let salesChart; 
+let selectedRange = 'Harian'; // Pastikan huruf kapital sesuai kunci di CHART_DATA
 
+// 2. Fungsi untuk Inisialisasi atau Update Chart
+function loadChart(range) {
+    const data = CHART_DATA[range];
+    const seriesData = data.map(item => item.val);
+    const categoriesData = data.map(item => item.label);
+
+    const commonOptions = {
+        series: [{
+            name: 'Pendapatan',
+            data: seriesData
+        }],
+        xaxis: {
+            categories: categoriesData
+        }
+    };
+
+    // Jika chart belum ada (pertama kali load)
+    if (!salesChart) {
+        const options = {
+            ...commonOptions,
+            chart: {
+                type: 'area',
+                height: 300,
+                toolbar: { show: false },
+                fontFamily: 'Plus Jakarta Sans, sans-serif',
+                animations: { enabled: true }
+            },
+            colors: ['#0d7a6a'],
+            dataLabels: { enabled: false },
+            stroke: { curve: 'smooth', width: 3 },
+            fill: {
+                type: 'gradient',
+                gradient: { opacityFrom: 0.45, opacityTo: 0.05 }
+            },
+            markers: {
+                size: 5, colors: ['#0d7a6a'], strokeColors: '#fff', strokeWidth: 2
+            },
+            yaxis: {
+                min: 0,
+                labels: {
+                    style: { colors: '#8aa8a3', fontSize: '12px' },
+                    formatter: function (val) {
+                        if (val >= 1000000) return "Rp " + (val / 1000000).toFixed(1) + "M";
+                        return "Rp " + val.toLocaleString('id-ID');
+                    }
+                }
+            },
+            grid: { borderColor: '#e2ece9', strokeDashArray: 4 },
+            tooltip: { y: { formatter: (val) => "Rp " + val.toLocaleString('id-ID') } }
+        };
+
+        salesChart = new ApexCharts(document.querySelector("#sales-chart"), options);
+        salesChart.render();
+    } else {
+        // Jika sudah ada, cukup update data dan kategorinya saja
+        // Ini mencegah bug perubahan skala sumbu Y yang tidak konsisten
+        salesChart.updateOptions(commonOptions);
+    }
+}
+
+// 3. AUTO LOAD saat halaman dibuka
+document.addEventListener("DOMContentLoaded", function() {
+    loadChart(selectedRange);
+});
+
+// 4. Fungsi Switch Tab
 function switchChartTab(btn) {
     document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
-    renderChart(CHART_DATA[btn.textContent.trim()] || CHART_DATA.Mingguan);
+    
+    // Gunakan innerText untuk mengambil 'Harian' atau 'Bulanan'
+    selectedRange = btn.innerText; 
+    loadChart(selectedRange);
 }
 </script>
+
 
 <?php include 'layout/footer.php'; ?>

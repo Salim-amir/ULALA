@@ -371,10 +371,10 @@ include 'layout/header.php';
 <script>
     /* ── Konfirmasi hapus produk ─────────────────────────────────────── */
     function konfirmasiHapus(id, nama) {
-        if (confirm(`Hapus produk "${nama}"?\n\nTindakan ini tidak dapat dibatalkan.`)) {
+        UlalaAlert.hapus(nama, () => {
             document.getElementById('hapus-id').value = id;
             document.getElementById('form-hapus').submit();
-        }
+        });
     }
 
     /* ── Debounce pencarian agar tidak submit tiap keystroke ─────────── */
