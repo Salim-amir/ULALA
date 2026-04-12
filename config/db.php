@@ -18,7 +18,7 @@ define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
 define('DB_PORT', getenv('DB_PORT') ?: '5432');
 define('DB_NAME', getenv('DB_NAME') ?: 'ulala_db');
 define('DB_USER', getenv('DB_USER') ?: 'postgres');
-define('DB_PASS', getenv('DB_PASS') ?: '12345');
+define('DB_PASS', getenv('DB_PASS') ?: '12345678');
 
 // ── DSN ────────────────────────────────────────────────────────────
 $dsn = sprintf(

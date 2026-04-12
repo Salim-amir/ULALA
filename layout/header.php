@@ -586,6 +586,7 @@ input[type=number]::-webkit-outer-spin-button {
   display: flex; align-items: center; gap: 8px; padding: 10px 18px;
   background: var(--primary); color: white; border: none; border-radius: var(--radius-sm);
   font-family: var(--font-main); font-size: 13px; font-weight: 700; cursor: pointer; transition: var(--transition);
+  text-decoration: none;
 }
 .ai-sync-btn:hover { background: var(--primary-dark); }
 .ai-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 24px; }
@@ -866,10 +867,6 @@ tbody tr:last-child td { border-bottom: none; }
         <span id="page-title"><?= htmlspecialchars($page_title) ?></span>
       </div>
       <div class="topbar-right">
-        <button class="topbar-btn" title="Notifikasi">
-          <i class="fa-regular fa-bell"></i>
-          <span class="notif-dot"></span>
-        </button>
         <a href="settings.php" class="topbar-btn" title="Pengaturan">
           <i class="fa-solid fa-gear"></i>
         </a>

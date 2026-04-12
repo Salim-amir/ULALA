@@ -9,9 +9,9 @@ require_once 'config/db.php';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Tangkap inputan dari form login
     // Di HTML Claude, name-nya adalah "username" tapi id-nya "login_identifier" (bisa email/username)
-    $identifier = trim($_POST['username']); 
+    $identifier = trim($_POST['username']);
     $password   = $_POST['password'];
-    
+
     // Validasi kosong
     if (empty($identifier) || empty($password)) {
         header("Location: login.php?error=empty_fields");
@@ -28,11 +28,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($user) {
             // Verifikasi kecocokan password yang diinput dengan hash di database
             if (password_verify($password, $user['password_hash'])) {
-                
+
                 // PASSWORD BENAR! Buat Session
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['nama_lengkap'] = $user['nama_lengkap'];
                 $_SESSION['username'] = $user['username'];
+                $_SESSION['email']        = $user['email'];
                 $_SESSION['role'] = $user['role'];
 
                 // Arahkan ke halaman utama
@@ -48,7 +49,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: login.php?error=user_not_found");
             exit;
         }
-
     } catch (PDOException $e) {
         // Jika ada error database
         die("Error Login: " . $e->getMessage());
@@ -58,4 +58,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header("Location: login.php");
     exit;
 }
-?>

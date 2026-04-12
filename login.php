@@ -121,8 +121,8 @@ body { font-family: var(--font-main); background: var(--bg); color: var(--text-p
   box-shadow: var(--shadow-lg); border: 1px solid rgba(13,122,106,0.08);
   animation: fadeInUp 0.5s ease;
 }
-.auth-card h2      { font-size: 20px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
-.auth-card .auth-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 28px; }
+.auth-card h2      { font-size: 20px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; text-align: center;}
+.auth-card .auth-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 28px; text-align: center;}
 
 /* ── Form elements ───────────────────────────────────────────────── */
 .form-group  { margin-bottom: 18px; }
@@ -393,8 +393,8 @@ body { font-family: var(--font-main); background: var(--bg); color: var(--text-p
   <!-- ─── FOOTER ─────────────────────────────────────────────────── -->
   <div class="auth-footer">
     <div class="auth-badges">
-      <span class="auth-badge"><i class="fa-solid fa-shield-halved"></i> Enkripsi AES-256</span>
-      <span class="auth-badge"><i class="fa-solid fa-cloud"></i> Cloud Storage</span>
+      <span class="auth-badge"><i class="fa-solid fa-shield-halved"></i> Hashing Bcrypt</span>
+      <span class="auth-badge"><i class="fa-solid fa-users"></i> ULALA</span>
     </div>
     <p class="auth-terms">
       Dengan mendaftar, Anda menyetujui Ketentuan Layanan dan Kebijakan Privasi Smart UMKM Assistant.
