@@ -74,7 +74,7 @@ echo "\xEF\xBB\xBF";
 $output = fopen('php://output', 'w');
 
 // Header baris pertama: info filter
-fputcsv($output, ['LAPORAN TRANSAKSI SMART UMKM'], ';');
+fputcsv($output, ['LAPORAN TRANSAKSI ULALA SMART'], ';');
 fputcsv($output, ['Periode:', $start_date . ' s/d ' . $end_date], ';');
 fputcsv($output, ['Metode Bayar:', $metode ?: 'Semua'], ';');
 fputcsv($output, ['Diekspor pada:', date('d/m/Y H:i:s')], ';');

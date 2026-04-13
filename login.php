@@ -49,7 +49,7 @@ $old_email    = htmlspecialchars($_GET['email']    ?? '');
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login – Smart UMKM Assistant</title>
+<title>Login – ULALA Smart Assistant</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -200,7 +200,7 @@ body { font-family: var(--font-main); background: var(--bg); color: var(--text-p
 
   <div class="auth-brand">
     <div class="brand-icon"><i class="fa-solid fa-robot"></i></div>
-    <h1>Smart UMKM</h1>
+    <h1>ULALA Smart Assistant</h1>
     <p>Asisten Cerdas untuk Pertumbuhan Bisnis Anda</p>
   </div>
 
@@ -397,7 +397,7 @@ body { font-family: var(--font-main); background: var(--bg); color: var(--text-p
       <span class="auth-badge"><i class="fa-solid fa-users"></i> ULALA</span>
     </div>
     <p class="auth-terms">
-      Dengan mendaftar, Anda menyetujui Ketentuan Layanan dan Kebijakan Privasi Smart UMKM Assistant.
+      Dengan mendaftar, Anda menyetujui Ketentuan Layanan dan Kebijakan Privasi ULALA Smart Assistant.
       Data Anda aman dan terlindungi sepenuhnya.
     </p>
   </div>

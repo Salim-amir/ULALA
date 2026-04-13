@@ -39,7 +39,7 @@ $user_initials = strtoupper(substr($user_nama, 0, 1) . (strpos($user_nama, ' ') 
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?= htmlspecialchars($page_title) ?> – Smart UMKM Assistant</title>
+<title><?= htmlspecialchars($page_title) ?> – ULALA Smart Assistant</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -805,7 +805,7 @@ tbody tr:last-child td { border-bottom: none; }
     <a href="dashboard.php" class="sidebar-brand" style="text-decoration:none;">
       <div class="sidebar-brand-icon"><i class="fa-solid fa-robot"></i></div>
       <div class="sidebar-brand-text">
-        <h2>Smart UMKM</h2>
+        <h2>ULALA Smart</h2>
         <span>Assistant</span>
       </div>
     </a>

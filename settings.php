@@ -509,7 +509,7 @@ $tab = $_GET['tab'] ?? 'profil';
                             <div style="width:72px;height:72px;background:var(--primary);border-radius:var(--radius-lg);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 8px 24px rgba(13,122,106,0.3);">
                                 <i class="fa-solid fa-robot" style="color:white;font-size:28px;"></i>
                             </div>
-                            <h2 style="font-size:22px;font-weight:800;letter-spacing:-0.5px;">Smart UMKM Assistant</h2>
+                            <h2 style="font-size:22px;font-weight:800;letter-spacing:-0.5px;">ULALA Smart Assistant</h2>
                             <p style="color:var(--text-muted);margin-top:4px;">Versi 1.0.0</p>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:480px;margin:0 auto;">
@@ -517,7 +517,7 @@ $tab = $_GET['tab'] ?? 'profil';
                             $info = [
                                 ['fa-database',    'Database',    'PostgreSQL 15'],
                                 ['fa-code',        'Backend',     'PHP 8.x + PDO'],
-                                ['fa-shield-halved', 'Enkripsi',   'AES-256 Ready'],
+                                ['fa-shield-halved', 'Hashing',   'Bcrypt'],
                                 ['fa-calendar',    'Build Date',  date('d M Y')],
                             ];
                             foreach ($info as [$icon, $label, $value]):
