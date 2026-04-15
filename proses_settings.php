@@ -6,7 +6,7 @@
  * Action: profil | password | tambah_kategori | hapus_kategori
  */
 session_start();
-// if (!isset($_SESSION['username'])) { header('Location: login.php'); exit; }
+if (!isset($_SESSION['username'])) { header('Location: login.php'); exit; }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: settings.php');
@@ -60,7 +60,7 @@ switch ($action) {
         }
 
         // TODO: Verifikasi password_lama dengan hash di DB
-        $stmt = $pdo->prepare("SELECT password_hash FROM users WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT password_hash FROM users WHERE username = ?");
         $stmt->execute([$_SESSION['username']]);
         $hash = $stmt->fetchColumn();
         if (!password_verify($password_lama, $hash)) {
@@ -68,7 +68,7 @@ switch ($action) {
             exit;
         }
         $new_hash = password_hash($password_baru, PASSWORD_BCRYPT);
-        $pdo->prepare("UPDATE users SET password_hash=? WHERE id=?")->execute([$new_hash, $_SESSION['username']]);
+        $pdo->prepare("UPDATE users SET password_hash=? WHERE username=?")->execute([$new_hash, $_SESSION['username']]);
 
         header('Location: settings.php?tab=password&success=password');
         break;
