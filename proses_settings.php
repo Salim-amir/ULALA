@@ -6,7 +6,7 @@
  * Action: profil | password | tambah_kategori | hapus_kategori
  */
 session_start();
-// if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit; }
+// if (!isset($_SESSION['username'])) { header('Location: login.php'); exit; }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: settings.php');
@@ -32,9 +32,9 @@ switch ($action) {
 
         // TODO: UPDATE tabel users SET nama_lengkap=?, username=?, email=? WHERE id=?
         // $pdo->prepare("UPDATE users SET nama_lengkap=?,username=?,email=?,diperbarui_pada=NOW() WHERE id=?")
-        //     ->execute([$nama_lengkap, $username, $email, $_SESSION['user_id']]);
+        //     ->execute([$nama_lengkap, $username, $email, $_SESSION['username']]);
         $pdo->prepare("UPDATE users SET nama_lengkap=?, username=?, email=? WHERE id=?")
-            ->execute([$nama_lengkap, $username, $email, $_SESSION['user_id']]);
+            ->execute([$nama_lengkap, $username, $email, $_SESSION['username']]);
 
         // Update session
         $_SESSION['nama_lengkap'] = $nama_lengkap;
@@ -61,14 +61,14 @@ switch ($action) {
 
         // TODO: Verifikasi password_lama dengan hash di DB
         $stmt = $pdo->prepare("SELECT password_hash FROM users WHERE id = ?");
-        $stmt->execute([$_SESSION['user_id']]);
+        $stmt->execute([$_SESSION['username']]);
         $hash = $stmt->fetchColumn();
         if (!password_verify($password_lama, $hash)) {
             header('Location: settings.php?tab=password&error=wrong_password');
             exit;
         }
         $new_hash = password_hash($password_baru, PASSWORD_BCRYPT);
-        $pdo->prepare("UPDATE users SET password=? WHERE id=?")->execute([$new_hash, $_SESSION['user_id']]);
+        $pdo->prepare("UPDATE users SET password_hash=? WHERE id=?")->execute([$new_hash, $_SESSION['username']]);
 
         header('Location: settings.php?tab=password&success=password');
         break;
