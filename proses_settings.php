@@ -60,7 +60,7 @@ switch ($action) {
         }
 
         // TODO: Verifikasi password_lama dengan hash di DB
-        $stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT password_hash FROM users WHERE id = ?");
         $stmt->execute([$_SESSION['user_id']]);
         $hash = $stmt->fetchColumn();
         if (!password_verify($password_lama, $hash)) {
