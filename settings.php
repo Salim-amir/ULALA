@@ -39,7 +39,7 @@ if (isset($_GET['error'])) {
         'prefix_taken'      => 'SKU Prefix sudah digunakan kategori lain. Pilih prefix yang berbeda.',
         'prefix_invalid'    => 'SKU Prefix hanya boleh huruf kapital, 2–6 karakter (contoh: MKN, BEV).',
         'required'          => 'Semua field wajib diisi.',
-        'db_error'          => 'Terjadi kesalahan database.',
+        'db_error'          => 'Email sudah terdaftar!.',
         default             => 'Terjadi kesalahan.',
     };
 }
