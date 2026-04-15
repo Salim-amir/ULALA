@@ -6,5 +6,4 @@ RUN apt-get update && apt-get install -y libpq-dev \
 WORKDIR /app
 COPY . .
 
-# 🔥 PAKAI ROUTER index.php
-CMD sh -c "php -S 0.0.0.0:${PORT:-8080} index.php"
+CMD ["sh", "-c", "echo Starting on port $PORT && php -S 0.0.0.0:${PORT:-8080} index.php"]
