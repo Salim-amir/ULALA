@@ -4,6 +4,9 @@
  * Koneksi PostgreSQL via PDO (Railway compatible)
  */
 
+var_dump(getenv("DATABASE_URL"));
+die();
+
 $url = getenv("DATABASE_URL");
 
 // 🔥 Validasi kalau env belum ada
