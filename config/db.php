@@ -1,22 +1,19 @@
 <?php
 /**
  * config/db.php
- * Koneksi PostgreSQL via PDO (Railway compatible)
+ * Koneksi PostgreSQL via PDO (Railway ready)
  */
 
-var_dump(getenv("DATABASE_URL"));
-die();
-
+// 🔥 Ambil DATABASE_URL dari Railway
 $url = getenv("DATABASE_URL");
 
-// 🔥 Validasi kalau env belum ada
 if (!$url) {
-    error_log("DATABASE_URL tidak ditemukan di environment");
+    error_log("DATABASE_URL tidak ditemukan");
     http_response_code(500);
     die("Config database belum tersedia.");
 }
 
-// 🔥 Parse DATABASE_URL
+// 🔥 Parse URL
 $db = parse_url($url);
 
 $host   = $db['host'] ?? '';
@@ -35,11 +32,12 @@ try {
         PDO::ATTR_EMULATE_PREPARES   => false,
     ]);
 
-    // Set timezone
+    // 🔥 Set timezone
     $pdo->exec("SET TIME ZONE 'Asia/Jakarta'");
 
 } catch (PDOException $e) {
     error_log('[DB ERROR] ' . $e->getMessage());
+
     http_response_code(503);
     die(json_encode([
         'error' => 'Koneksi database gagal. Silakan coba beberapa saat lagi.'
