@@ -5,23 +5,11 @@
  * Koneksi PostgreSQL via PDO (Railway ready)
  */
 
-// 🔥 Ambil DATABASE_URL dari Railway
-$url = getenv("DATABASE_URL");
-
-if (!$url) {
-    error_log("DATABASE_URL tidak ditemukan");
-    http_response_code(500);
-    die("Config database belum tersedia.");
-}
-
-// 🔥 Parse URL
-$db = parse_url($url);
-
-$host   = $db['host'] ?? '';
-$port   = $db['port'] ?? '5432';
-$user   = $db['user'] ?? '';
-$pass   = $db['pass'] ?? '';
-$dbname = isset($db['path']) ? ltrim($db['path'], '/') : '';
+$host   = 'monorail.proxy.rlwy.net';
+$port   = '33529';
+$user   = 'postgres';
+$pass   = 'jtyIlbGTRNfDqOoVUWqkFaxsknbeoroe'; // <-- Jangan lupa ganti ini!
+$dbname = 'railway';
 
 // 🔥 DSN PostgreSQL
 $dsn = "pgsql:host=$host;port=$port;dbname=$dbname";
