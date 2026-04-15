@@ -1,4 +1,5 @@
 <?php
+
 /**
  * config/db.php
  * Koneksi PostgreSQL via PDO (Railway ready)
@@ -34,18 +35,13 @@ try {
 
     // 🔥 Set timezone
     $pdo->exec("SET TIME ZONE 'Asia/Jakarta'");
-
 } catch (PDOException $e) {
-    error_log('[DB ERROR] ' . $e->getMessage());
-
-    http_response_code(503);
-    die(json_encode([
-        'error' => 'Koneksi database gagal. Silakan coba beberapa saat lagi.'
-    ]));
+    die("ERROR ASLI: " . $e->getMessage());
 }
 
 // ── Helper: generate nomor transaksi unik ──────────────────────────
-function generate_nomor_transaksi(PDO $pdo): string {
+function generate_nomor_transaksi(PDO $pdo): string
+{
     $prefix = '#TRX-';
     do {
         $nomor = $prefix . mt_rand(10000, 99999);
@@ -56,6 +52,7 @@ function generate_nomor_transaksi(PDO $pdo): string {
 }
 
 // ── Helper: format rupiah ──────────────────────────────────────────
-function rp(float $n): string {
+function rp(float $n): string
+{
     return 'Rp ' . number_format($n, 0, ',', '.');
 }
