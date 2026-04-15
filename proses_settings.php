@@ -1,12 +1,16 @@
 <?php
-
 /**
  * proses_settings.php
  * Proses semua POST dari settings.php
  * Action: profil | password | tambah_kategori | hapus_kategori
  */
 session_start();
-if (!isset($_SESSION['username'])) { header('Location: login.php'); exit; }
+
+// Pastikan user sudah login dan user_id tersedia di session
+if (!isset($_SESSION['user_id'])) { 
+    header('Location: login.php'); 
+    exit; 
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: settings.php');
@@ -30,18 +34,22 @@ switch ($action) {
             exit;
         }
 
-        // TODO: UPDATE tabel users SET nama_lengkap=?, username=?, email=? WHERE id=?
-        // $pdo->prepare("UPDATE users SET nama_lengkap=?,username=?,email=?,diperbarui_pada=NOW() WHERE id=?")
-        //     ->execute([$nama_lengkap, $username, $email, $_SESSION['username']]);
-        $pdo->prepare("UPDATE users SET nama_lengkap=?, username=?, email=? WHERE id=?")
-            ->execute([$nama_lengkap, $username, $email, $_SESSION['username']]);
+        try {
+            // PERBAIKAN: Gunakan $_SESSION['user_id'] (Integer) untuk WHERE id
+            $sql = "UPDATE users SET nama_lengkap = ?, username = ?, email = ? WHERE id = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$nama_lengkap, $username, $email, $_SESSION['user_id']]);
 
-        // Update session
-        $_SESSION['nama_lengkap'] = $nama_lengkap;
-        $_SESSION['username']     = $username;
-        $_SESSION['email']        = $email;
+            // Update session agar tampilan di navbar/header langsung berubah
+            $_SESSION['nama_lengkap'] = $nama_lengkap;
+            $_SESSION['username']     = $username;
+            $_SESSION['email']        = $email;
 
-        header('Location: settings.php?tab=profil&success=profil');
+            header('Location: settings.php?tab=profil&success=profil');
+        } catch (PDOException $e) {
+            error_log('[proses_settings/profil] ' . $e->getMessage());
+            header('Location: settings.php?tab=profil&error=db_error');
+        }
         break;
 
     // ── Ubah Password ─────────────────────────────────────────────
@@ -54,26 +62,37 @@ switch ($action) {
             header('Location: settings.php?tab=password&error=required');
             exit;
         }
+        
         if ($password_baru !== $konfirmasi) {
             header('Location: settings.php?tab=password&error=password_mismatch');
             exit;
         }
 
-        // TODO: Verifikasi password_lama dengan hash di DB
-        $stmt = $pdo->prepare("SELECT password_hash FROM users WHERE username = ?");
-        $stmt->execute([$_SESSION['username']]);
-        $hash = $stmt->fetchColumn();
-        if (!password_verify($password_lama, $hash)) {
-            header('Location: settings.php?tab=password&error=wrong_password');
-            exit;
-        }
-        $new_hash = password_hash($password_baru, PASSWORD_BCRYPT);
-        $pdo->prepare("UPDATE users SET password_hash=? WHERE username=?")->execute([$new_hash, $_SESSION['username']]);
+        try {
+            // PERBAIKAN: Cari user berdasarkan id, bukan username
+            $stmt = $pdo->prepare("SELECT password_hash FROM users WHERE id = ?");
+            $stmt->execute([$_SESSION['user_id']]);
+            $hash = $stmt->fetchColumn();
 
-        header('Location: settings.php?tab=password&success=password');
+            if (!$hash || !password_verify($password_lama, $hash)) {
+                header('Location: settings.php?tab=password&error=wrong_password');
+                exit;
+            }
+
+            $new_hash = password_hash($password_baru, PASSWORD_BCRYPT);
+            
+            // PERBAIKAN: Update berdasarkan id
+            $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?")
+                ->execute([$new_hash, $_SESSION['user_id']]);
+
+            header('Location: settings.php?tab=password&success=password');
+        } catch (PDOException $e) {
+            error_log('[proses_settings/password] ' . $e->getMessage());
+            header('Location: settings.php?tab=password&error=db_error');
+        }
         break;
 
-    // ── Tambah Kategori (dengan SKU Prefix) ──────────────────────────
+    // ── Tambah Kategori ──────────────────────────────────────────
     case 'tambah_kategori':
         $nama_kategori = trim($_POST['nama_kategori'] ?? '');
         $sku_prefix    = strtoupper(trim($_POST['sku_prefix'] ?? ''));
@@ -84,14 +103,12 @@ switch ($action) {
             exit;
         }
 
-        // Validasi: hanya huruf kapital, 2–6 karakter
         if (!preg_match('/^[A-Z]{2,6}$/', $sku_prefix)) {
             header('Location: settings.php?tab=kategori&error=prefix_invalid');
             exit;
         }
 
         try {
-            // Cek apakah prefix sudah dipakai kategori lain
             $cek = $pdo->prepare("SELECT 1 FROM kategori WHERE sku_prefix = ?");
             $cek->execute([$sku_prefix]);
             if ($cek->fetchColumn()) {
@@ -103,40 +120,6 @@ switch ($action) {
                 ->execute([$nama_kategori, $deskripsi, $sku_prefix]);
             header('Location: settings.php?tab=kategori&success=kat_added');
         } catch (PDOException $e) {
-            error_log('[proses_settings/tambah_kategori] ' . $e->getMessage());
-            header('Location: settings.php?tab=kategori&error=db_error');
-        }
-        break;
-
-    // ── Edit SKU Prefix saja (tanpa ganti nama/deskripsi) ────────────
-    case 'edit_prefix':
-        $id         = (int)($_POST['id'] ?? 0);
-        $sku_prefix = strtoupper(trim($_POST['sku_prefix'] ?? ''));
-
-        if (!$id || !$sku_prefix) {
-            header('Location: settings.php?tab=kategori&error=required');
-            exit;
-        }
-
-        if (!preg_match('/^[A-Z]{2,6}$/', $sku_prefix)) {
-            header('Location: settings.php?tab=kategori&error=prefix_invalid');
-            exit;
-        }
-
-        try {
-            // Cek apakah prefix sudah dipakai kategori LAIN
-            $cek = $pdo->prepare("SELECT 1 FROM kategori WHERE sku_prefix = ? AND id <> ?");
-            $cek->execute([$sku_prefix, $id]);
-            if ($cek->fetchColumn()) {
-                header('Location: settings.php?tab=kategori&error=prefix_taken');
-                exit;
-            }
-
-            $pdo->prepare("UPDATE kategori SET sku_prefix = ? WHERE id = ?")
-                ->execute([$sku_prefix, $id]);
-            header('Location: settings.php?tab=kategori&success=kat_added');
-        } catch (PDOException $e) {
-            error_log('[proses_settings/edit_prefix] ' . $e->getMessage());
             header('Location: settings.php?tab=kategori&error=db_error');
         }
         break;
@@ -150,7 +133,6 @@ switch ($action) {
         }
 
         try {
-            // Cek apakah masih digunakan produk
             $cek = $pdo->prepare("SELECT COUNT(*) FROM produk WHERE kategori_id = ?");
             $cek->execute([$id]);
             if ((int)$cek->fetchColumn() > 0) {
@@ -161,7 +143,6 @@ switch ($action) {
             $pdo->prepare("DELETE FROM kategori WHERE id = ?")->execute([$id]);
             header('Location: settings.php?tab=kategori&success=kat_deleted');
         } catch (PDOException $e) {
-            error_log('[proses_settings/hapus_kategori] ' . $e->getMessage());
             header('Location: settings.php?tab=kategori&error=db_error');
         }
         break;
