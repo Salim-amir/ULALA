@@ -1,44 +1,46 @@
 <?php
 /**
  * config/db.php
- * ─────────────────────────────────────────────────────────────────
- * Koneksi tunggal ke PostgreSQL via PDO.
- * Include file ini di setiap halaman yang butuh DB:
- *   require_once __DIR__ . '/../config/db.php';
- * atau jika sudah di root:
- *   require_once 'config/db.php';
- *
- * Variabel yang tersedia setelah include:
- *   $pdo  – instance PDO siap pakai
- * ─────────────────────────────────────────────────────────────────
+ * Koneksi PostgreSQL via PDO (Railway compatible)
  */
 
-// ── Konfigurasi koneksi — sesuaikan dengan environment Anda ───────
-define('DB_HOST', getenv('PGHOST') ?: 'localhost');
-define('DB_PORT', getenv('PGPORT') ?: '5432');
-define('DB_NAME', getenv('PGDATABASE') ?: 'ulala_db');
-define('DB_USER', getenv('PGUSER') ?: 'postgres');
-define('DB_PASS', getenv('PGPASSWORD') ?: '');
+$url = getenv("DATABASE_URL");
 
-// ── DSN ────────────────────────────────────────────────────────────
-$dsn = sprintf(
-    'pgsql:host=%s;port=%s;dbname=%s',
-    DB_HOST, DB_PORT, DB_NAME
-);
+// 🔥 Validasi kalau env belum ada
+if (!$url) {
+    error_log("DATABASE_URL tidak ditemukan di environment");
+    http_response_code(500);
+    die("Config database belum tersedia.");
+}
+
+// 🔥 Parse DATABASE_URL
+$db = parse_url($url);
+
+$host   = $db['host'] ?? '';
+$port   = $db['port'] ?? '5432';
+$user   = $db['user'] ?? '';
+$pass   = $db['pass'] ?? '';
+$dbname = isset($db['path']) ? ltrim($db['path'], '/') : '';
+
+// 🔥 DSN PostgreSQL
+$dsn = "pgsql:host=$host;port=$port;dbname=$dbname";
 
 try {
-    $pdo = new PDO($dsn, DB_USER, DB_PASS, [
+    $pdo = new PDO($dsn, $user, $pass, [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES   => false,
     ]);
-    // Set timezone sesuai server
+
+    // Set timezone
     $pdo->exec("SET TIME ZONE 'Asia/Jakarta'");
+
 } catch (PDOException $e) {
-    // Di produksi: log error, jangan tampilkan detail ke user
     error_log('[DB ERROR] ' . $e->getMessage());
     http_response_code(503);
-    die(json_encode(['error' => 'Koneksi database gagal. Silakan coba beberapa saat lagi.']));
+    die(json_encode([
+        'error' => 'Koneksi database gagal. Silakan coba beberapa saat lagi.'
+    ]));
 }
 
 // ── Helper: generate nomor transaksi unik ──────────────────────────
