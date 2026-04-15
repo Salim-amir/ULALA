@@ -7,5 +7,5 @@ RUN apt-get update && apt-get install -y libpq-dev \
 WORKDIR /app
 COPY . .
 
-# 🔥 FIX DI SINI
-CMD php -S 0.0.0.0:$PORT
+# 🔥 pakai port tetap
+CMD php -S 0.0.0.0:8080
